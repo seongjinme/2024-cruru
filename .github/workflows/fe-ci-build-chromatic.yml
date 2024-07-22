@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: 저장소 checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Node.js 셋업
         uses: actions/setup-node@v4
