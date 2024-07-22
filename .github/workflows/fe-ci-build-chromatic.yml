@@ -1,0 +1,55 @@
+name: FE CI - 빌드 및 Chromatic 배포
+
+on:
+  push:
+    branches:
+      - fe-91-CHORE_CI
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: ./frontend
+    concurrency:
+      group: ${{ github.workflow }}
+      cancel-in-progress: true
+
+    steps:
+      - name: 저장소 checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: |
+            frontend/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: 애플리케이션 의존성 항목들 설치
+        run: npm ci
+
+      - name: 백엔드 API 연동용 환경변수 설정
+        run: |
+          echo "REACT_APP_CRURU_API_URL=${{ secrets.REACT_APP_CRURU_API_URL }}" >> .env.local
+
+      - name: 애플리케이션 빌드
+        run: npm run build
+
+      - name: Storybook을 Chromatic로 배포
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.FE_CHROMATIC_PROJECT_TOKEN }}
+          workingDir: frontend
+
+      - name: 빌드된 파일을 artifact로 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: fe-dev-dist
+          path: frontend/dist
